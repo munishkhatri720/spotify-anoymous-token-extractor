@@ -3,6 +3,13 @@ on: [push]
 jobs:
     main:
         runs-on : ubuntu-latest
+        env:
+            PROXY_USERNAME : ${{ secrets.PROXY_USERNAME }}
+            PROXY_PASSWORD : ${{ secrets.PROXY_PASSWORD }}
+            PROXY_HOST : ${{ secrets.PROXY_HOST }}
+            NODE_URL : ${{ secrets.NODE_URL }}
+            NODE_PASSWORD : ${{ secrets.NODE_PASSWORD }}
+            DISCORD_WEBHOOK : ${{ secrets.DISCORD_WEBHOOK }}
         steps:
             - name: Checkout repository
               uses: actions/checkout@v2

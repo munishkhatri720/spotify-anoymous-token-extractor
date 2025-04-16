@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.theme import Theme
 import logging
 import os
+import json
 
 
 console = Console(
@@ -43,7 +44,7 @@ PROXY_PASSWORD = os.getenv("PROXY_PASSWORD")
 
 NODE_URL = os.getenv("NODE_URL")
 NODE_PASSWORD = os.getenv("NODE_PASSWORD")
-DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK")
+DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK" , None)
 
 
 class SpotifyTokenExtractor:
@@ -98,7 +99,7 @@ class SpotifyTokenExtractor:
                 "--no-sandbox=True",
               #  f"--proxy-server={PROXY_HOST}",
             ],
-            browser_executable_path="/usr/bin/google-chrome"
+            browser_executable_path=os.getenv('CHROME_BIN' , None)
         )
         self.tab = self.browser.main_tab
         self.tab.add_handler(cdp.fetch.RequestPaused, self.request_paused_handler)
@@ -116,11 +117,19 @@ class SpotifyTokenExtractor:
         log.info("Waiting for the page to fully load...")
         await asyncio.sleep(25)
 
+    async def send_discord_webhook(self , content : dict[str , str | int | bool]) -> None:
+        if DISCORD_WEBHOOK:
+            resp = await self.client.post(DISCORD_WEBHOOK , json={'content' : f"```yaml\n{content}\n```"})
+            log.info(f'Webhook Post Status Code : {resp.status_code}')
+        else:
+            log.warning("Webhook not set. Skipping...")     
+
     async def main(self):
         self.browser_task = self.loop.create_task(self.execute())
         try:
             result = await asyncio.wait_for(self.future, timeout=25.0)
             log.info(f"Result : {result}")
+            await self.send_discord_webhook(content=json.dumps(result))
         except asyncio.TimeoutError as e:
             log.error(f"Timed out for token extraction : {e}")
         finally:

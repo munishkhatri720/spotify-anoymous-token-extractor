@@ -7,10 +7,8 @@ from rich.logging import RichHandler
 from rich.console import Console
 from rich.theme import Theme
 import logging
-from dotenv import load_dotenv
 import os
 
-load_dotenv()
 
 console = Console(
     theme=Theme(
@@ -115,12 +113,12 @@ class SpotifyTokenExtractor:
         log.info("Opening : https://open.spotify.com")
         self.tab = await self.browser.get("https://open.spotify.com/")
         log.info("Waiting for the page to fully load...")
-        await asyncio.sleep(200)
+        await asyncio.sleep(25)
 
     async def main(self):
         self.browser_task = self.loop.create_task(self.execute())
         try:
-            result = await asyncio.wait_for(self.future, timeout=250.0)
+            result = await asyncio.wait_for(self.future, timeout=25.0)
             log.info(f"Result : {result}")
         except asyncio.TimeoutError as e:
             log.error(f"Timed out for token extraction : {e}")

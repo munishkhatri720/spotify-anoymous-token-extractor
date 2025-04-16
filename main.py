@@ -9,7 +9,7 @@ from rich.theme import Theme
 import logging
 import os
 import json
-from datetime import datetime
+from datetime import datetime , timezone
 
 
 console = Console(
@@ -118,48 +118,50 @@ class SpotifyTokenExtractor:
         log.info("Waiting for the page to fully load...")
         await asyncio.sleep(25)
 
-    async def send_discord_webhook(self , content : dict[str , str | int | bool]) -> None:
-        if DISCORD_WEBHOOK:
-            token = content.get("accessToken", "N/A")
+    async def send_discord_webhook(
+        self, content: dict[str, str | int | bool], is_error: bool = False, error_msg: str = ""
+    ) -> None:
+        if not DISCORD_WEBHOOK:
+            log.warning("Webhook not set. Skipping...")
+            return
+
+        if is_error:
+            embed = {
+                "title": "❌ Token Extraction Failed",
+                "description": f"**Error:** `{error_msg}`",
+                "color": 0xFF0000,
+                "footer": {"text": "Spotify Token Extractor"},
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        else:
             expires_ts = content.get("accessTokenExpirationTimestampMs")
-            is_anonymous = content.get("isAnonymous", False)
-
-
             if isinstance(expires_ts, int):
                 expires_dt = datetime.fromtimestamp(expires_ts / 1000)
-                expires_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
                 remaining_mins = round((expires_dt - datetime.now()).total_seconds() / 60, 2)
+                details = f"Valid for `{remaining_mins}` minutes."
             else:
-                expires_str = "N/A"
-                remaining_mins = "N/A"
+                details = "Token expiry info not available."
 
             embed = {
-            "title": "🎧 Spotify Token Extracted",
-            "color": 0x1DB954,  
-            "fields": [
-                {"name": "Access Token", "value": f"`{token[:25]}...`" if token != "N/A" else "N/A", "inline": False},
-                {"name": "Anonymous", "value": str(is_anonymous), "inline": True},
-                {"name": "Expires At", "value": expires_str, "inline": True},
-                {"name": "In", "value": f"{remaining_mins} min" if remaining_mins != "N/A" else "N/A", "inline": True},
-            ],
-            "footer": {"text": "Spotify Token Extractor"},
-            "timestamp": datetime.utcnow().isoformat(),
-        }
+                "title": "✅ Token Extraction Successful",
+                "description": details,
+                "color": 0x1DB954,
+                "footer": {"text": "Spotify Token Extractor"},
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
 
-            payload = {"embeds": [embed]}
-            resp = await self.client.post(DISCORD_WEBHOOK , json=payload)
-            log.info(f'Webhook Post Status Code : {resp.status_code}')
-        else:
-            log.warning("Webhook not set. Skipping...")     
+        resp = await self.client.post(DISCORD_WEBHOOK, json={"embeds": [embed]})
+        log.info(f"Webhook Post Status Code: {resp.status_code}")
 
     async def main(self):
         self.browser_task = self.loop.create_task(self.execute())
         try:
             result = await asyncio.wait_for(self.future, timeout=25.0)
             log.info(f"Result : {result}")
-            await self.send_discord_webhook(content=json.dumps(result))
+            await self.send_discord_webhook(content=result , is_error=result.get('error' , None) is not None , error_msg=result.get('error' , None))
         except asyncio.TimeoutError as e:
             log.error(f"Timed out for token extraction : {e}")
+            await self.send_discord_webhook(content={} , is_error=True , error_msg="Timed out for token extraction :" + str(e))
         finally:
             log.info("Cancelled the browser task and closed the browser.")
             self.browser_task.cancel()

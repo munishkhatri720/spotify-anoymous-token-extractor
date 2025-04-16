@@ -1,5 +1,8 @@
 run-name: Spotify Anoymous Token Extractor
-on: [push]
+on:
+    schedule:
+      - cron: '*/20 * * * *'  # every 20 minutes
+    push:
 jobs:
     main:
         runs-on : ubuntu-latest

@@ -9,6 +9,7 @@ from rich.theme import Theme
 import logging
 import os
 import json
+from datetime import datetime
 
 
 console = Console(
@@ -119,7 +120,34 @@ class SpotifyTokenExtractor:
 
     async def send_discord_webhook(self , content : dict[str , str | int | bool]) -> None:
         if DISCORD_WEBHOOK:
-            resp = await self.client.post(DISCORD_WEBHOOK , json={'content' : f"```yaml\n{content}\n```"})
+            token = content.get("accessToken", "N/A")
+            expires_ts = content.get("accessTokenExpirationTimestampMs")
+            is_anonymous = content.get("isAnonymous", False)
+
+
+            if isinstance(expires_ts, int):
+                expires_dt = datetime.fromtimestamp(expires_ts / 1000)
+                expires_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
+                remaining_mins = round((expires_dt - datetime.now()).total_seconds() / 60, 2)
+            else:
+                expires_str = "N/A"
+                remaining_mins = "N/A"
+
+            embed = {
+            "title": "🎧 Spotify Token Extracted",
+            "color": 0x1DB954,  
+            "fields": [
+                {"name": "Access Token", "value": f"`{token[:25]}...`" if token != "N/A" else "N/A", "inline": False},
+                {"name": "Anonymous", "value": str(is_anonymous), "inline": True},
+                {"name": "Expires At", "value": expires_str, "inline": True},
+                {"name": "In", "value": f"{remaining_mins} min" if remaining_mins != "N/A" else "N/A", "inline": True},
+            ],
+            "footer": {"text": "Spotify Token Extractor"},
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+            payload = {"embeds": [embed]}
+            resp = await self.client.post(DISCORD_WEBHOOK , json=payload)
             log.info(f'Webhook Post Status Code : {resp.status_code}')
         else:
             log.warning("Webhook not set. Skipping...")     

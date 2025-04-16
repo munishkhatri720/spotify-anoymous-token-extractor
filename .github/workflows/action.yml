@@ -13,7 +13,13 @@ jobs:
                 python-version: '3.11'
 
             - name : Install UV 
-              run: pip install uv    
+              run: pip install uv   
+            
+            - name : Setup Chrome 
+              uses: browser-actions/setup-chrome@v1
+              with:
+                chrome-version: 120
+                install-dependencies: true  
             
             - name: Run Extractor
               run : uv run main.py  

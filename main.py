@@ -96,7 +96,7 @@ class SpotifyTokenExtractor:
                 "--headless=true",
                 "--disable-gpu=true",
                 "--no-sandbox=True",
-                f"--proxy-server={PROXY_HOST}",
+              #  f"--proxy-server={PROXY_HOST}",
             ],
             browser_executable_path="/usr/bin/google-chrome"
         )

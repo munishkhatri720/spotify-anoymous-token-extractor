@@ -62,7 +62,7 @@ class SpotifyTokenExtractor:
 
     async def execute(self) -> None:
         log.info("Starting webbrowser in headless mode...")
-        self.browser = await nodriver.start(browser_args=["--headless=true"] , browser_executable_path="/usr/bin/google-chrome")
+        self.browser = await nodriver.start(browser_args=["--headless=true" , "--disable-gpu=true" , "--no-sandbox=True"] , browser_executable_path="/usr/bin/google-chrome")
         self.tab = self.browser.main_tab
         self.tab.add_handler(cdp.fetch.RequestPaused, self.request_paused_handler)
         log.info('Opening : https://open.spotify.com')

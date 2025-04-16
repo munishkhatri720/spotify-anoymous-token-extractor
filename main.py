@@ -43,8 +43,8 @@ PROXY_HOST = os.getenv("PROXY_HOST")
 PROXY_USERNAME = os.getenv("PROXY_USERNAME")
 PROXY_PASSWORD = os.getenv("PROXY_PASSWORD")
 
-NODE_URL = os.getenv("NODE_URL")
-NODE_PASSWORD = os.getenv("NODE_PASSWORD")
+NODE_URL = os.getenv("NODE_URL" , None)
+NODE_PASSWORD = os.getenv("NODE_PASSWORD" , None)
 DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK" , None)
 
 
@@ -116,7 +116,15 @@ class SpotifyTokenExtractor:
         log.info("Opening : https://open.spotify.com")
         self.tab = await self.browser.get("https://open.spotify.com/")
         log.info("Waiting for the page to fully load...")
-        await asyncio.sleep(25)
+        await asyncio.sleep(30)
+
+    async def apply_token_to_nodes(self , data : dict) -> None:
+        if NODE_URL:
+            resp = await self.client.patch(NODE_URL , headers={'Authorization' : NODE_PASSWORD} , json=data)
+            log.info(f"Node patch response status code : {resp.status_code}")
+        else:
+            log.warning("Node url is not set. Skipping...")    
+                                              
 
     async def send_discord_webhook(
         self, content: dict[str, str | int | bool], is_error: bool = False, error_msg: str = ""
@@ -156,9 +164,11 @@ class SpotifyTokenExtractor:
     async def main(self):
         self.browser_task = self.loop.create_task(self.execute())
         try:
-            result = await asyncio.wait_for(self.future, timeout=25.0)
-            log.info(f"Result : {result}")
-            await self.send_discord_webhook(content=result , is_error=result.get('error' , None) is not None , error_msg=result.get('error' , None))
+            result = await asyncio.wait_for(self.future, timeout=30.0)
+            is_error : bool = result.get('error' , None) is not None
+            if not is_error:
+                await self.apply_token_to_nodes(data=result)
+            await self.send_discord_webhook(content=result , is_error= is_error, error_msg=result.get('error' , None))
         except asyncio.TimeoutError as e:
             log.error(f"Timed out for token extraction : {e}")
             await self.send_discord_webhook(content={} , is_error=True , error_msg="Timed out for token extraction :" + str(e))

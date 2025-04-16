@@ -53,7 +53,7 @@ class SpotifyTokenExtractor:
             else:
                 self.future.set_result({'error' : resp.text})    
         else:
-            log.info(f'Skipping request : {event.request.url}')
+            log.info(f'Allowing request : {event.request.url}')
             self.loop.create_task(
                 self.tab.feed_cdp(
                     cdp.fetch.continue_request(request_id=event.request_id)

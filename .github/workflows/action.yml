@@ -15,11 +15,16 @@ jobs:
             - name : Install UV 
               run: pip install uv   
             
-            - name : Setup Chrome 
-              uses: browser-actions/setup-chrome@v1
-              with:
-                chrome-version: 120
-                install-dependencies: true  
+            - name: Install Chrome
+              run: |
+                sudo apt update
+                sudo apt install -y wget gnupg unzip
+                wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor > google.gpg
+                sudo install -o root -g root -m 644 google.gpg /usr/share/keyrings/
+                echo "deb [signed-by=/usr/share/keyrings/google.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+                sudo apt update
+                sudo apt install -y google-chrome-stable
+                google-chrome-stable --version 
             
             - name: Run Extractor
               run : uv run main.py  
